@@ -8,6 +8,9 @@
 #include <string>
 #include <stdio.h>
 
+void transfer() {
+
+}
 //формирование очереди из N1 свободных блоков
 void P1(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree) {
 	int N1 = Cvar.N1;
@@ -21,7 +24,7 @@ void P1(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree) {
 		memset(fBlocks[i].information_part, 0, sizeof(char) * 128);
 	}
 	Hfree->First_fb = &fBlocks[0];
-	Hfree->Last_fb = &fBlocks[N1];
+	Hfree->Last_fb = &fBlocks[N1 - 1];
 	Hfree->N1 = N1;
 }
 
@@ -71,11 +74,11 @@ void P4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, Сh
 		CRC ^= Hp32->First_fb->information_part[i];
 	}
 	Hp32->First_fb->CRC = CRC << 8;
-	Hp32->First_fb->CRC += (uint8_t)(Hp32->First_fb->frame_header ^ Hp32->First_fb->information_part[0]);
+	Hp32->First_fb->CRC += (uint8_t)(Hp32->First_fb->frame_header ^ Cvar.m + 1);
 }
 
 //перенос информационного кадра, сформированного программой P4, в очередь повтора Оповт и в регистр на передачу в канал.
-void P5(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32, СharacteristicFB *Hrep) {
+Free_block P5(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32, СharacteristicFB *Hrep) {
 	Hrep->First_fb = &fBlocks[0];
 	Hrep->Last_fb = &fBlocks[0];
 	Hrep->N1 = 1;
@@ -83,6 +86,9 @@ void P5(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, Сh
 	Hp32->First_fb = &fBlocks[1];
 	Hp32->Last_fb = &fBlocks[Cvar.N2 - 1];
 	Hp32->N1 = Cvar.N2 - 1;
+	Hp32->First_fb->pr_block_add = 0;
+	Hp32->Last_fb->next_block_add = 0;
+	return *Hrep->First_fb;
 }
 
 void print_this_shit(Const_variables Cvar, Free_block *fBlocks) {
@@ -93,7 +99,7 @@ void print_this_shit(Const_variables Cvar, Free_block *fBlocks) {
 }
 int main()
 {
-	Const_variables Cvar = { 14, 6, 1, 3, 3 };
+	Const_variables Cvar = { 20, 8, 2, 1, 1 };
 	Free_block *fBlocks = new Free_block[Cvar.N1];
 	СharacteristicFB *Hfree = new СharacteristicFB{ 0, 0, 0 };
 	СharacteristicFB *Hp32 = new СharacteristicFB{ 0, 0, 0 };
@@ -102,9 +108,21 @@ int main()
 	char mas[1024];
 	strncpy_s(mas, temp.c_str(), sizeof(mas));
 	mas[sizeof(mas) - 1] = 0;
+	for (int i = 0; i < 1024; i++) {
+		mas[i] = Cvar.m + 1;
+	}
 	P1(Cvar, fBlocks, Hfree);
 	P2(Cvar, fBlocks, Hfree, mas, temp.length());
 	P3(Cvar, fBlocks, Hfree, Hp32);
 	P4(Cvar, fBlocks, Hfree, Hp32);
-	print_this_shit(Cvar, fBlocks);
+	Free_block RGout = P5(Cvar, fBlocks, Hfree, Hp32, Hrep);
+	//print_this_shit(Cvar, fBlocks);
+	std::cout << "Frame Header" << std::endl;
+	for (int i = sizeof(RGout.frame_header) * 8 - 1; i >= 0; i--) {
+		std::cout << (((1 << i) & RGout.frame_header) ? '1' : '0');
+	}
+	std::cout << "\nCRC" << std::endl;
+	for (int i = sizeof(RGout.CRC) * 8 - 1; i >= 0; i--) {
+		std::cout << (((1 << i) & RGout.CRC) ? '1' : '0');
+	}
 }
