@@ -132,13 +132,51 @@ void P10(СharacteristicFB *Hfree, СharacteristicFB *Hkpm, СharacteristicFB *H
 }
 
 //установление режима передачи очередного информационного кадра “I” в канал.
-void P11() {
-
+int P11() {
+	return 1;
 }
 void print_this_shit(Const_variables Cvar, Free_block *fBlocks) {
-	setlocale(LC_ALL, "Russian");
 	for (int i = 0; i < Cvar.N1; i++) {
 		std::cout << fBlocks[i].information_part;
+	}
+}
+
+void printing_FB(Free_block *fb, int inform = 0) {
+	std::cout << "\nАдресс предыдущего блока" << std::endl;
+	for (int i = sizeof(fb->pr_block_add) * 8 - 1; i >= 0; i--) {
+		std::cout << (((1 << i) & (uint32_t)fb->pr_block_add) ? '1' : '0');
+		if (i % 8 == 0) std::cout << " ";
+	}
+	std::cout << "\nАдресс следуюшего блока" << std::endl;
+	for (int i = sizeof(fb->next_block_add) * 8 - 1; i >= 0; i--) {
+		std::cout << (((1 << i) & (uint32_t)fb->next_block_add) ? '1' : '0');
+		if (i % 8 == 0) std::cout << " ";
+	}
+	std::cout << "\nЗаголовок пакета" << std::endl;
+	for (int j = 0; j < 3; j++) {
+		for (int i = sizeof(fb->packet_header[j]) * 8 - 1; i >= 0; i--) {
+			std::cout << (((1 << i) & fb->packet_header[j]) ? '1' : '0');
+			if (i % 8 == 0) std::cout << " ";
+		}
+	}
+	std::cout << "\nЗаголовок фрейма" << std::endl;
+	for (int i = sizeof(fb->frame_header) * 8 - 1; i >= 0; i--) {
+		std::cout << (((1 << i) & fb->frame_header) ? '1' : '0');
+		if (i % 8 == 0) std::cout << " ";
+	}
+	if (inform == 1) {
+		std::cout << "\nИнформационная часть" << std::endl;
+		for (int j = 0; j < 128; j++) {
+			for (int i = sizeof(fb->information_part[j]) * 8 - 1; i >= 0; i--) {
+				std::cout << (((1 << i) & fb->information_part[j]) ? '1' : '0');
+				if (i % 8 == 0) std::cout << " ";
+			}
+		}
+	}
+	std::cout << "\nCRC" << std::endl;
+	for (int i = sizeof(fb->CRC) * 8 - 1; i >= 0; i--) {
+		std::cout << (((1 << i) & fb->CRC) ? '1' : '0');
+		if (i % 8 == 0) std::cout << " ";
 	}
 }
 
@@ -165,15 +203,9 @@ void lab1(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, �
 	P4(Cvar, fBlocks_in_lab1, Hfree_in_lab1, Hp32_in_lab1);
 	Free_block RGout = P5(Cvar, fBlocks_in_lab1, Hfree_in_lab1, Hp32_in_lab1, Hrep_in_lab1);
 	//print_this_shit(Cvar, fBlocks);
-	//TODO: сделать вывод 
-	std::cout << "Frame Header" << std::endl;
-	for (int i = sizeof(RGout.frame_header) * 8 - 1; i >= 0; i--) {
-		std::cout << (((1 << i) & RGout.frame_header) ? '1' : '0');
-	}
-	std::cout << "\nCRC" << std::endl;
-	for (int i = sizeof(RGout.CRC) * 8 - 1; i >= 0; i--) {
-		std::cout << (((1 << i) & RGout.CRC) ? '1' : '0');
-	}
+	std::cout << "Результаты Лабораторной работы 1" << std::endl;
+	std::cout << "\nВыходной регистр" << std::endl;
+	printing_FB(&RGout, 1);
 	return;
 }
 
@@ -184,6 +216,7 @@ void lab2(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, �
 	СharacteristicFB *Hp32_in_lab2 = new СharacteristicFB{ 0, 0, 0 };
 	СharacteristicFB *Hrep_in_lab2 = new СharacteristicFB{ 0, 0, 0 };
 	СharacteristicFB *Hkpm = new СharacteristicFB{ 0,0,0 };
+	int REGIM = 0;
 	fBlocks_in_lab2 = fBlocks;
 	Hfree_in_lab2 = Hfree;
 	Hp32_in_lab2 = Hp32;
@@ -192,10 +225,19 @@ void lab2(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, �
 	P7(Cvar, fBlocks_in_lab2, Hfree_in_lab2, RGin);
 	P8(Hfree_in_lab2, Hkpm);
 	P9(Hfree_in_lab2, Hkpm);
+	P10(Hfree_in_lab2, Hkpm, Hrep_in_lab2);
+	REGIM = P11();
+	std::cout << "\nРезультаты Лабораторной работы 2" << std::endl;
+	std::cout << "\nПакет I" << std::endl;
+	printing_FB(Hfree_in_lab2->Last_fb, 1);
+	std::cout << "\n\nПакет RR" << std::endl;
+	printing_FB(Hfree_in_lab2->Last_fb->pr_block_add, 1);
+	return;
 }
 
 int main()
 {
+	setlocale(LC_ALL, "Russian");
 	Const_variables Cvar = { 20, 8, 2, 1, 1 };
 	Free_block *fBlocks = new Free_block[Cvar.N1];
 	СharacteristicFB *Hfree = new СharacteristicFB{ 0, 0, 0 };

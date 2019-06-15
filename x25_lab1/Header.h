@@ -13,7 +13,7 @@ public:
 
 struct Free_block {
 public:
-	Free_block *pr_block_add = 0;			// 2 байиа под адрес предыдущего блока в списке блоков 
+	Free_block *pr_block_add = 0;			// 2 байта под адрес предыдущего блока в списке блоков 
 	Free_block *next_block_add = 0;			// 2 байта под адрес следующего блока в списке блоков
 	uint8_t	packet_header[3] = { 0, 0, 0 };	// 3 байта под заголовок пакета
 	uint8_t frame_header = 0;				// 1 байт под заголовк кадра
