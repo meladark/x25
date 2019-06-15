@@ -48,18 +48,32 @@ int P2(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, char
 }
 
 //перенос N2 пакетов данных из очереди Освоб в очередь пакетов Оп32;
-void P3(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree) {
+void P3(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32) {
 	int N2 = Cvar.N2;
-	СharacteristicFB *Hp32 = new СharacteristicFB{ &fBlocks[0], &fBlocks[N2], N2 };
+	Hp32->First_fb = &fBlocks[0];
+	Hp32->Last_fb = &fBlocks[N2];
+	Hp32->N1 = N2;
 	fBlocks[N2 - 1].next_block_add = 0;
 	Hfree->First_fb = &fBlocks[N2];
 	Hfree->N1 -= N2;
 }
 
 //формирование информационного кадра, включающего первый пакет в очереди пакетов Оп32
-void P4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree) {
-
+void P4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32) {
+	int VS = Cvar.Z1;
+	int VR = Cvar.Z2;
+	Hp32->First_fb->pr_block_add = 0;
+	Hp32->First_fb->frame_header = VR << 5;
+	Hp32->First_fb->frame_header += VS << 1;
+	Hp32->First_fb->frame_header &= 238; 
+	uint8_t CRC = 0;
+	for (int i = 0; i < 128; i++) {
+		CRC ^= Hp32->First_fb->information_part[i];
+	}
+	Hp32->First_fb->CRC = CRC << 8;
+	Hp32->First_fb->CRC += (uint8_t)(Hp32->First_fb->frame_header ^ Hp32->First_fb->information_part[0]);
 }
+
 
 void print_this_shit(Const_variables Cvar, Free_block *fBlocks) {
 	setlocale(LC_ALL, "Russian");
@@ -72,12 +86,14 @@ int main()
 	Const_variables Cvar = { 14, 6, 1, 3, 3 };
 	Free_block *fBlocks = new Free_block[Cvar.N1];
 	СharacteristicFB *Hfree = new СharacteristicFB{ 0, 0, 0 };
+	СharacteristicFB *Hp32 = new СharacteristicFB{ 0, 0, 0 };
 	std::string temp = "Слава тебе, безысходная боль!\nУмер вчера сероглазый король.\n\nВечер осенний был душен и ал,\nМуж мой, вернувшись, спокойно сказал:\n\n«Знаешь, с охоты его принесли,\nТело у старого дуба нашли.\n\nЖаль королеву. Такой молодой!..\nЗа ночь одну она стала седой».\n\nТрубку свою на камине нашел\nИ на работу ночную ушел.\n\nДочку мою я сейчас разбужу,\nВ серые глазки ее погляжу.\n\nА за окном шелестят тополя:\n«Нет на земле твоего короля…»\n\n\nДвадцать первое. Ночь. Понедельник.\nОчертанья столицы во мгле.\nСочинил же какой - то бездельник,\nЧто бывает любовь на земле.\n\nИ от лености или со скуки\nВсе поверили, так и живут:\nЖдут свиданий, боятся разлуки\nИ любовные песни поют.\n\nНо иным открывается тайна,\nИ почиет на них тишина\nЯ на это наткнулась случайно\nИ с тех пор все как будто больна.";
 	char mas[1024];
 	strncpy_s(mas, temp.c_str(), sizeof(mas));
 	mas[sizeof(mas) - 1] = 0;
 	P1(Cvar, fBlocks, Hfree);
 	P2(Cvar, fBlocks, Hfree, mas, temp.length());
-	P3(Cvar, fBlocks, Hfree);
+	P3(Cvar, fBlocks, Hfree, Hp32);
+	P4(Cvar, fBlocks, Hfree, Hp32);
 	print_this_shit(Cvar, fBlocks);
 }
