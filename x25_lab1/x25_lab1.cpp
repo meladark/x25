@@ -51,10 +51,10 @@ int P2(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, char
 void P3(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32) {
 	int N2 = Cvar.N2;
 	Hp32->First_fb = &fBlocks[0];
-	Hp32->Last_fb = &fBlocks[N2];
+	Hp32->Last_fb = &fBlocks[N2 - 1];
 	Hp32->N1 = N2;
 	fBlocks[N2 - 1].next_block_add = 0;
-	Hfree->First_fb = &fBlocks[N2];
+	Hfree->First_fb = &fBlocks[N2 - 1];
 	Hfree->N1 -= N2;
 }
 
@@ -74,6 +74,16 @@ void P4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, Сh
 	Hp32->First_fb->CRC += (uint8_t)(Hp32->First_fb->frame_header ^ Hp32->First_fb->information_part[0]);
 }
 
+//перенос информационного кадра, сформированного программой P4, в очередь повтора Оповт и в регистр на передачу в канал.
+void P5(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32, СharacteristicFB *Hrep) {
+	Hrep->First_fb = &fBlocks[0];
+	Hrep->Last_fb = &fBlocks[0];
+	Hrep->N1 = 1;
+	fBlocks[0].pr_block_add = 0;
+	Hp32->First_fb = &fBlocks[1];
+	Hp32->Last_fb = &fBlocks[Cvar.N2 - 1];
+	Hp32->N1 = Cvar.N2 - 1;
+}
 
 void print_this_shit(Const_variables Cvar, Free_block *fBlocks) {
 	setlocale(LC_ALL, "Russian");
@@ -87,6 +97,7 @@ int main()
 	Free_block *fBlocks = new Free_block[Cvar.N1];
 	СharacteristicFB *Hfree = new СharacteristicFB{ 0, 0, 0 };
 	СharacteristicFB *Hp32 = new СharacteristicFB{ 0, 0, 0 };
+	СharacteristicFB *Hrep = new СharacteristicFB{ 0, 0, 0 };
 	std::string temp = "Слава тебе, безысходная боль!\nУмер вчера сероглазый король.\n\nВечер осенний был душен и ал,\nМуж мой, вернувшись, спокойно сказал:\n\n«Знаешь, с охоты его принесли,\nТело у старого дуба нашли.\n\nЖаль королеву. Такой молодой!..\nЗа ночь одну она стала седой».\n\nТрубку свою на камине нашел\nИ на работу ночную ушел.\n\nДочку мою я сейчас разбужу,\nВ серые глазки ее погляжу.\n\nА за окном шелестят тополя:\n«Нет на земле твоего короля…»\n\n\nДвадцать первое. Ночь. Понедельник.\nОчертанья столицы во мгле.\nСочинил же какой - то бездельник,\nЧто бывает любовь на земле.\n\nИ от лености или со скуки\nВсе поверили, так и живут:\nЖдут свиданий, боятся разлуки\nИ любовные песни поют.\n\nНо иным открывается тайна,\nИ почиет на них тишина\nЯ на это наткнулась случайно\nИ с тех пор все как будто больна.";
 	char mas[1024];
 	strncpy_s(mas, temp.c_str(), sizeof(mas));
