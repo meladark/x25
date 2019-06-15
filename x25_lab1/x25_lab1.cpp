@@ -8,9 +8,23 @@
 #include <string>
 #include <stdio.h>
 
-void transfer() {
+void transfer( СharacteristicFB *out, СharacteristicFB *in, int Count = 1) {
+	for (int i = 0; i < Count; i++) {
+		if (in->Last_fb != nullptr) {
+			in->Last_fb->next_block_add = out->First_fb;
+			out->First_fb->pr_block_add = in->Last_fb;		
+		}
+		else {
+			in->First_fb = out->First_fb;
+		}
+		in->Last_fb = out->First_fb;
+		out->First_fb = out->First_fb->next_block_add;
+		in->N1 += 1;
+		out->N1 -= 1;
 
+	}
 }
+
 //формирование очереди из N1 свободных блоков
 void P1(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree) {
 	int N1 = Cvar.N1;
@@ -53,12 +67,7 @@ int P2(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, char
 //перенос N2 пакетов данных из очереди Освоб в очередь пакетов Оп32;
 void P3(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32) {
 	int N2 = Cvar.N2;
-	Hp32->First_fb = &fBlocks[0];
-	Hp32->Last_fb = &fBlocks[N2 - 1];
-	Hp32->N1 = N2;
-	fBlocks[N2 - 1].next_block_add = 0;
-	Hfree->First_fb = &fBlocks[N2 - 1];
-	Hfree->N1 -= N2;
+	transfer(Hfree, Hp32, N2);
 }
 
 //формирование информационного кадра, включающего первый пакет в очереди пакетов Оп32
@@ -79,13 +88,7 @@ void P4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, Сh
 
 //перенос информационного кадра, сформированного программой P4, в очередь повтора Оповт и в регистр на передачу в канал.
 Free_block P5(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32, СharacteristicFB *Hrep) {
-	Hrep->First_fb = &fBlocks[0];
-	Hrep->Last_fb = &fBlocks[0];
-	Hrep->N1 = 1;
-	fBlocks[0].pr_block_add = 0;
-	Hp32->First_fb = &fBlocks[1];
-	Hp32->Last_fb = &fBlocks[Cvar.N2 - 1];
-	Hp32->N1 = Cvar.N2 - 1;
+	transfer(Hp32, Hrep);
 	Hp32->First_fb->pr_block_add = 0;
 	Hp32->Last_fb->next_block_add = 0;
 	return *Hrep->First_fb;
