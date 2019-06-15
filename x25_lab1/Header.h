@@ -30,3 +30,10 @@ public:
 	Free_block *Last_fb = 0;	//адрес начала массива последнего свободного блока в очереди
 	int N1 = 0;
 };
+
+struct RRPacket
+{
+public:
+	uint8_t RRframe = 0;
+	uint16_t CRC = 0;
+};
