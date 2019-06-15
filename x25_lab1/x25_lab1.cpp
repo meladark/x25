@@ -8,12 +8,6 @@
 #include <string>
 #include <stdio.h>
 
-void add_in(СharacteristicFB *in, Free_block *fb) {
-	in->N1 += 1;
-	fb->pr_block_add = in->Last_fb;
-	fb->next_block_add = 0;
-	in->Last_fb = fb;
-}
 void transfer(СharacteristicFB *out = NULL, СharacteristicFB *in = NULL, int Count = 1) {
 	if (in == NULL) {
 		out->First_fb = out->First_fb->next_block_add;
@@ -32,8 +26,8 @@ void transfer(СharacteristicFB *out = NULL, СharacteristicFB *in = NULL, int C
 		out->First_fb = out->First_fb->next_block_add;
 		in->N1 += 1;
 		out->N1 -= 1;
-
 	}
+	in->Last_fb->next_block_add = 0;
 }
 
 //формирование очереди из N1 свободных блоков
@@ -113,15 +107,32 @@ RRPacket P6() {
 
 //запись этого кадра RR с контрольно-проверочной комбинацией КПК в первый блок очереди Освоб
 void P7(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, RRPacket RGin){
-	Free_block *RGinfb = new Free_block;
-	RGinfb->CRC = RGin.CRC;
-	RGinfb->frame_header = RGin.RRframe;
-	add_in(Hfree, RGinfb);
-	transfer(Hfree);
+	Hfree->First_fb->CRC = RGin.CRC;
+	Hfree->First_fb->frame_header = RGin.RRframe;
 }
 
 //перенос принятого кадра RR из Освоб в очередь Окпм;
-void P8() {
+void P8(СharacteristicFB *Hfree, СharacteristicFB *Hkpm) {
+	transfer(Hfree, Hkpm);
+}
+
+//проверка правильного приема переданного ранее кадра “I” и находящегося в очереди повтора Оповт;
+void P9(СharacteristicFB *Hfree, СharacteristicFB *Hkpm) {
+	uint8_t NSRR = Hkpm->First_fb->frame_header & 224 >> 5;
+	uint8_t NSI = Hfree->First_fb->frame_header & 14 >> 1;
+	if (NSRR - 1 == NSI) return; else std::cout << "OSHIBKA";
+}
+
+//считывание кадров “RR” из очереди Окпм и “I” из Оповт и установка их в очередь Освоб;
+void P10(СharacteristicFB *Hfree, СharacteristicFB *Hkpm, СharacteristicFB *Hrep) {
+	Hkpm->First_fb->CRC = 0;
+	Hkpm->First_fb->frame_header = 0;
+	transfer(Hkpm, Hfree);
+	transfer(Hrep, Hfree);
+}
+
+//установление режима передачи очередного информационного кадра “I” в канал.
+void P11() {
 
 }
 void print_this_shit(Const_variables Cvar, Free_block *fBlocks) {
@@ -172,12 +183,15 @@ void lab2(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, �
 	СharacteristicFB *Hfree_in_lab2 = new СharacteristicFB{ 0, 0, 0 };
 	СharacteristicFB *Hp32_in_lab2 = new СharacteristicFB{ 0, 0, 0 };
 	СharacteristicFB *Hrep_in_lab2 = new СharacteristicFB{ 0, 0, 0 };
+	СharacteristicFB *Hkpm = new СharacteristicFB{ 0,0,0 };
 	fBlocks_in_lab2 = fBlocks;
 	Hfree_in_lab2 = Hfree;
 	Hp32_in_lab2 = Hp32;
 	Hrep_in_lab2 = Hrep;
 	RRPacket RGin = P6();
 	P7(Cvar, fBlocks_in_lab2, Hfree_in_lab2, RGin);
+	P8(Hfree_in_lab2, Hkpm);
+	P9(Hfree_in_lab2, Hkpm);
 }
 
 int main()
