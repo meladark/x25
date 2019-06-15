@@ -9,6 +9,7 @@ public:
 	const int Z1;
 	const int Z2;
 	const int m;
+	const int MCICL;
 };
 
 struct Free_block {

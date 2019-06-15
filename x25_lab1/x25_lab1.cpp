@@ -24,6 +24,7 @@ void transfer(СharacteristicFB *out = NULL, СharacteristicFB *in = NULL, int C
 		}
 		in->Last_fb = out->First_fb;
 		out->First_fb = out->First_fb->next_block_add;
+		if (!out->First_fb) out->Last_fb = 0;
 		in->N1 += 1;
 		out->N1 -= 1;
 	}
@@ -76,27 +77,46 @@ void P3(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, Сh
 }
 
 //формирование информационного кадра, включающего первый пакет в очереди пакетов Оп32
-void P4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32) {
+void P4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32, int ilab3 = 0) {
 	int VS = Cvar.Z1;
 	int VR = Cvar.Z2;
-	Hp32->First_fb->pr_block_add = 0;
-	Hp32->First_fb->frame_header = VR << 5;
-	Hp32->First_fb->frame_header += VS << 1;
-	Hp32->First_fb->frame_header &= 238; 
-	uint8_t CRC = 0;
-	for (int i = 0; i < 128; i++) {
-		CRC ^= Hp32->First_fb->information_part[i];
+	if (ilab3 == 0) {
+		//Hp32->First_fb->pr_block_add = 0;
+		Hp32->First_fb->frame_header = VR << 5;
+		Hp32->First_fb->frame_header += VS << 1;
+		Hp32->First_fb->frame_header &= 238;
+		uint8_t CRC = 0;
+		for (int i = 0; i < 128; i++) {
+			CRC ^= Hp32->First_fb->information_part[i];
+		}
+		Hp32->First_fb->CRC = CRC << 8;
+		Hp32->First_fb->CRC += (uint8_t)(Hp32->First_fb->frame_header ^ Cvar.m + 1);
 	}
-	Hp32->First_fb->CRC = CRC << 8;
-	Hp32->First_fb->CRC += (uint8_t)(Hp32->First_fb->frame_header ^ Cvar.m + 1);
+	else if (ilab3 == 1) {
+		Free_block *fb = Hp32->First_fb;
+		for (int i = 0; i < Cvar.MCICL; i++) {
+			//Hp32->First_fb->pr_block_add = 0;
+			fb->frame_header = VR << 5;
+			fb->frame_header += VS << 1;
+			fb->frame_header &= 238;
+			uint8_t CRC = 0;
+			for (int i = 0; i < 128; i++) {
+				CRC ^= fb->information_part[i];
+			}
+			fb->CRC = CRC << 8;
+			fb->CRC += (uint8_t)(fb->frame_header ^ Cvar.m + 1);
+		}
+	}
+
 }
 
 //перенос информационного кадра, сформированного программой P4, в очередь повтора Оповт и в регистр на передачу в канал.
-Free_block P5(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32, СharacteristicFB *Hrep) {
-	transfer(Hp32, Hrep);
-	Hp32->First_fb->pr_block_add = 0;
-	Hp32->Last_fb->next_block_add = 0;
-	return *Hrep->First_fb;
+Free_block P5(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32, СharacteristicFB *Hrep, int MCICL = 1) {
+	transfer(Hp32, Hrep, MCICL);
+	Free_block *fb = Hp32->First_fb;
+	fb->pr_block_add = 0;
+	fb->next_block_add = 0;
+	return *fb;
 }
 
 //формирование принятого кадра “RR”, подтверждающего правильный прием переданного на противоположную сторону информационного кадра “I”(cм.лаб. 1).Проверка безошибочного приема кадра RR с канала связи;
@@ -141,42 +161,81 @@ void print_this_shit(Const_variables Cvar, Free_block *fBlocks) {
 	}
 }
 
-void printing_FB(Free_block *fb, int inform = 0) {
+void printing_FB(Free_block *fb, int inform = 0, int form = 0) {
 	std::cout << "\nАдресс предыдущего блока" << std::endl;
-	for (int i = sizeof(fb->pr_block_add) * 8 - 1; i >= 0; i--) {
-		std::cout << (((1 << i) & (uint32_t)fb->pr_block_add) ? '1' : '0');
-		if (i % 8 == 0) std::cout << " ";
-	}
-	std::cout << "\nАдресс следуюшего блока" << std::endl;
-	for (int i = sizeof(fb->next_block_add) * 8 - 1; i >= 0; i--) {
-		std::cout << (((1 << i) & (uint32_t)fb->next_block_add) ? '1' : '0');
-		if (i % 8 == 0) std::cout << " ";
-	}
-	std::cout << "\nЗаголовок пакета" << std::endl;
-	for (int j = 0; j < 3; j++) {
-		for (int i = sizeof(fb->packet_header[j]) * 8 - 1; i >= 0; i--) {
-			std::cout << (((1 << i) & fb->packet_header[j]) ? '1' : '0');
+	if (form == 0 && fb != NULL) {
+		for (int i = sizeof(fb->pr_block_add) * 8 - 1; i >= 0; i--) {
+			std::cout << (((1 << i) & (uint32_t)fb->pr_block_add) ? '1' : '0');
 			if (i % 8 == 0) std::cout << " ";
 		}
 	}
-	std::cout << "\nЗаголовок фрейма" << std::endl;
-	for (int i = sizeof(fb->frame_header) * 8 - 1; i >= 0; i--) {
-		std::cout << (((1 << i) & fb->frame_header) ? '1' : '0');
-		if (i % 8 == 0) std::cout << " ";
+	else if (form == 1 && fb != NULL) {
+		std::cout << (uint32_t)fb->pr_block_add;
 	}
-	if (inform == 1) {
-		std::cout << "\nИнформационная часть" << std::endl;
-		for (int j = 0; j < 128; j++) {
-			for (int i = sizeof(fb->information_part[j]) * 8 - 1; i >= 0; i--) {
-				std::cout << (((1 << i) & fb->information_part[j]) ? '1' : '0');
+	else if (fb == NULL) std::cout << 0;
+
+	std::cout << "\nАдресс следуюшего блока" << std::endl;
+	if (form == 0 && fb != NULL) {
+		for (int i = sizeof(fb->next_block_add) * 8 - 1; i >= 0; i--) {
+			std::cout << (((1 << i) & (uint32_t)fb->next_block_add) ? '1' : '0');
+			if (i % 8 == 0) std::cout << " ";
+		}
+	}
+	else if (form == 1 && fb != NULL) {
+		std::cout << (uint32_t)fb->next_block_add;
+	}
+	else if (fb == NULL) std::cout << 0;
+	std::cout << "\nЗаголовок пакета" << std::endl;
+	if (form == 0) {
+		for (int j = 0; j < 3; j++) {
+			for (int i = sizeof(fb->packet_header[j]) * 8 - 1; i >= 0; i--) {
+				std::cout << (((1 << i) & fb->packet_header[j]) ? '1' : '0');
 				if (i % 8 == 0) std::cout << " ";
 			}
 		}
 	}
-	std::cout << "\nCRC" << std::endl;
-	for (int i = sizeof(fb->CRC) * 8 - 1; i >= 0; i--) {
-		std::cout << (((1 << i) & fb->CRC) ? '1' : '0');
-		if (i % 8 == 0) std::cout << " ";
+	else if (form == 1) {
+		for (int j = 0; j < 3; j++) {
+			std::cout << (uint32_t)fb->packet_header[j];
+		}
+	}
+	std::cout << "\nЗаголовок фрейма" << std::endl;
+	if (form == 0) {
+		for (int i = sizeof(fb->frame_header) * 8 - 1; i >= 0; i--) {
+			std::cout << (((1 << i) & fb->frame_header) ? '1' : '0');
+			if (i % 8 == 0) std::cout << " ";
+		}
+	}
+	else if (form == 1) {
+		for (int j = 0; j < 3; j++) {
+			std::cout << (uint32_t)fb->frame_header;
+		}
+	}
+	if (inform == 1) {
+		std::cout << "\nИнформационная часть" << std::endl;
+		if (form == 0) {
+			for (int j = 0; j < 128; j++) {
+				for (int i = sizeof(fb->information_part[j]) * 8 - 1; i >= 0; i--) {
+					std::cout << (((1 << i) & fb->information_part[j]) ? '1' : '0');
+					if (i % 8 == 0) std::cout << " ";
+				}
+			}
+		}
+		else if (form == 1) {
+			for (int j = 0; j < 128; j++) {
+				std::cout << (uint32_t)fb->information_part[j];
+			}
+		}
+		std::cout << "\nCRC" << std::endl;
+		if (form == 0) {
+			for (int i = sizeof(fb->CRC) * 8 - 1; i >= 0; i--) {
+				std::cout << (((1 << i) & fb->CRC) ? '1' : '0');
+				if (i % 8 == 0) std::cout << " ";
+			}
+		}
+		else if (form == 1) {
+			std::cout << fb->CRC;
+		}
 	}
 }
 
@@ -235,14 +294,52 @@ void lab2(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, �
 	return;
 }
 
+//Программа передачи в канал связи нескольких информационных кадров
+void lab3(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32, СharacteristicFB *Hrep) {
+	Free_block *fBlocks_in_lab3 = new Free_block[Cvar.N1];
+	СharacteristicFB *Hfree_in_lab3 = new СharacteristicFB{ 0, 0, 0 };
+	СharacteristicFB *Hp32_in_lab3 = new СharacteristicFB{ 0, 0, 0 };
+	СharacteristicFB *Hrep_in_lab3 = new СharacteristicFB{ 0, 0, 0 };
+	СharacteristicFB *Hkpm = new СharacteristicFB{ 0,0,0 };
+	fBlocks_in_lab3 = fBlocks;
+	Hfree_in_lab3 = Hfree;
+	Hp32_in_lab3 = Hp32;
+	Hrep_in_lab3 = Hrep;
+	char mas[1024];
+	mas[sizeof(mas) - 1] = 0;
+	for (int i = 0; i < 1024; i++) {
+		mas[i] = Cvar.m + 1;
+	}
+	P1(Cvar, fBlocks_in_lab3, Hfree_in_lab3);
+	P2(Cvar, fBlocks_in_lab3, Hfree_in_lab3, mas, 700);
+	P3(Cvar, fBlocks_in_lab3, Hfree_in_lab3, Hp32_in_lab3);
+	P4(Cvar, fBlocks_in_lab3, Hfree_in_lab3, Hp32_in_lab3, 1);
+	Free_block RGout = P5(Cvar, fBlocks_in_lab3, Hfree_in_lab3, Hp32_in_lab3, Hrep_in_lab3, Cvar.MCICL);
+	std::cout << "\nРезультаты Лабораторной работы 3" << std::endl;
+	std::cout << "\nРегистр вывода 1";
+	printing_FB(&RGout, 1);
+	std::cout << "\n";
+	printing_FB(&RGout, 1, 1);
+	Free_block *fb = Hrep_in_lab3->First_fb;
+	for (int i = 0; i < Cvar.MCICL; i++) {
+		std::cout << "\nОповт " << i + 1 << std::endl;
+		printing_FB(fb, 1);
+		std::cout << "\n";
+		printing_FB(fb, 1, 1);
+		fb = fb->next_block_add;
+	}
+	return;
+}
+
 int main()
 {
 	setlocale(LC_ALL, "Russian");
-	Const_variables Cvar = { 20, 8, 2, 1, 1 };
+	Const_variables Cvar = { 20, 8, 2, 1, 1, 3};
 	Free_block *fBlocks = new Free_block[Cvar.N1];
 	СharacteristicFB *Hfree = new СharacteristicFB{ 0, 0, 0 };
 	СharacteristicFB *Hp32 = new СharacteristicFB{ 0, 0, 0 };
 	СharacteristicFB *Hrep = new СharacteristicFB{ 0, 0, 0 };
 	lab1(Cvar, fBlocks, Hfree, Hp32, Hrep);
 	lab2(Cvar, fBlocks, Hfree, Hp32, Hrep);
+	lab3(Cvar, fBlocks, Hfree, Hp32, Hrep);
 }
