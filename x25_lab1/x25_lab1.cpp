@@ -95,7 +95,6 @@ void P4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, Сh
 	else if (ilab3 == 1) {
 		Free_block *fb = Hp32->First_fb;
 		for (int i = 0; i < Cvar.MCICL; i++) {
-			//Hp32->First_fb->pr_block_add = 0;
 			fb->frame_header = VR << 5;
 			fb->frame_header += VS << 1;
 			fb->frame_header &= 238;
@@ -105,6 +104,7 @@ void P4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, Сh
 			}
 			fb->CRC = CRC << 8;
 			fb->CRC += (uint8_t)(fb->frame_header ^ Cvar.m + 1);
+			fb = fb->next_block_add;
 		}
 	}
 
@@ -322,7 +322,7 @@ void lab3(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, �
 	printing_FB(&RGout, 1, 1);
 	Free_block *fb = Hrep_in_lab3->First_fb;
 	for (int i = 0; i < Cvar.MCICL; i++) {
-		std::cout << "\nОповт " << i + 1 << std::endl;
+		std::cout << "\n\nОповт " << i + 1 << std::endl;
 		printing_FB(fb, 1);
 		std::cout << "\n";
 		printing_FB(fb, 1, 1);
