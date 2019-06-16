@@ -105,6 +105,7 @@ void P4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, Сh
 			fb->CRC = CRC << 8;
 			fb->CRC += (uint8_t)(fb->frame_header ^ Cvar.m + 1);
 			fb = fb->next_block_add;
+			VS++;
 		}
 	}
 
@@ -145,12 +146,14 @@ void P8(СharacteristicFB *Hfree, СharacteristicFB *Hkpm) {
 }
 
 //проверка правильного приема переданного ранее кадра “I” и находящегося в очереди повтора Оповт;
-void P9(СharacteristicFB *Hfree, СharacteristicFB *Hkpm) {
-	uint8_t NSRR = Hkpm->First_fb->frame_header & 224 >> 5;
-	uint8_t NSI = Hfree->First_fb->frame_header & 14 >> 1;
-	if (NSRR - 1 == NSI) return; else std::cout << "OSHIBKA";
+void P9(СharacteristicFB *Hfree, СharacteristicFB *Hkpm, int iform = 0) {
+	uint8_t NSRR = (Hkpm->First_fb->frame_header & 224) >> 5;
+	uint8_t NSI = (Hfree->First_fb->frame_header & 14) >> 1;
+	if (NSRR - 1 == NSI) return;
+	else std::cout << "OSHIBKA";
 }
-
+int P11(СharacteristicFB *Hfree, СharacteristicFB *Hrep, int iform);
+Free_block P12(СharacteristicFB *Hfree, СharacteristicFB *Hrep, Free_block *fb);
 //считывание кадров “RR” из очереди Окпм и “I” из Оповт и установка их в очередь Освоб;
 void P10(СharacteristicFB *Hfree, СharacteristicFB *Hkpm, СharacteristicFB *Hrep, int iform = 0) {
 	if (iform == 0) {
@@ -160,16 +163,44 @@ void P10(СharacteristicFB *Hfree, СharacteristicFB *Hkpm, СharacteristicFB *H
 		transfer(Hrep, Hfree);
 	}
 	else if (iform == 1) {
-		uint8_t NS = Hrep->First_fb->frame_header & 14 >> 1;
-
+		transfer(Hkpm, Hfree);
+		uint8_t NS = (Hrep->First_fb->frame_header >> 1) & 7;
+		uint8_t NSp = (Hfree->Last_fb->frame_header & 224) >> 5;
+		Free_block *fb = Hrep->First_fb->next_block_add;
+		while (fb != NULL) {
+			if (NS < NSp) P11(Hfree, Hrep, 1);
+			else 
+				P12(Hfree, Hrep, fb);
+			NS = (fb->frame_header >> 1) & 7;
+			fb = fb->next_block_add;
+		}
 	}
-	
 }
 
 //установление режима передачи очередного информационного кадра “I” в канал.
-int P11() {
-	return 1;
+int P11(СharacteristicFB *Hfree = NULL, СharacteristicFB *Hrep = NULL, int iform = 0) {
+	if (iform == 0) return 1;
+	transfer(Hrep, Hfree);
+	return 0;
 }
+
+void printing_FB(Free_block *fb, int inform, int form);
+Free_block P12(СharacteristicFB *Hfree, СharacteristicFB *Hrep, Free_block *fb) {
+	std::cout << "\n\nПоследний кадр Освоб" << std::endl;
+	printing_FB(Hfree->Last_fb, 1, 0);
+	Free_block *_fb = Hrep->First_fb;
+	int i = 1;
+	while (_fb != NULL) {
+		std::cout << "\n\nКадр Оповт " << i << std::endl;
+		i++;
+		printing_FB(_fb, 1, 0);
+		_fb = _fb->next_block_add;
+	}
+	std::cout << "\n\nРегистр RGвых " << std::endl;
+	printing_FB(fb, 1, 0);
+	return *fb;
+}
+//программа передачи в канал кадров “I” с очереди повтора Оповт.
 void print_this_shit(Const_variables Cvar, Free_block *fBlocks) {
 	for (int i = 0; i < Cvar.N1; i++) {
 		std::cout << fBlocks[i].information_part;
@@ -386,6 +417,7 @@ void lab5(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, �
 	Hfree_in_lab5 = Hfree;
 	Hp32_in_lab5 = Hp32;
 	Hrep_in_lab5 = Hrep;
+	std::cout << "\nРезультаты Лабораторной работы 5" << std::endl;
 	P10(Hfree, Hkpm, Hrep, 1);
 }
 
@@ -398,9 +430,9 @@ int main()
 	СharacteristicFB *Hp32 = new СharacteristicFB{ 0, 0, 0 };
 	СharacteristicFB *Hrep = new СharacteristicFB{ 0, 0, 0 };
 	СharacteristicFB *Hkpm = new СharacteristicFB{ 0,0,0 };
-	lab1(Cvar, fBlocks, Hfree, Hp32, Hrep);
-	lab2(Cvar, fBlocks, Hfree, Hp32, Hrep);
-	lab3(Cvar, fBlocks, Hfree, Hp32, Hrep);
-	lab4(Cvar, fBlocks, Hfree, Hp32, Hrep);
-	lab5(Cvar, fBlocks, Hfree, Hp32, Hrep);
+	lab1(Cvar, fBlocks, Hfree, Hp32, Hrep, Hkpm);
+	lab2(Cvar, fBlocks, Hfree, Hp32, Hrep, Hkpm);
+	lab3(Cvar, fBlocks, Hfree, Hp32, Hrep, Hkpm);
+	lab4(Cvar, fBlocks, Hfree, Hp32, Hrep, Hkpm);
+	lab5(Cvar, fBlocks, Hfree, Hp32, Hrep, Hkpm);
 }
