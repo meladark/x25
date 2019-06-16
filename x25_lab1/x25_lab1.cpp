@@ -436,4 +436,5 @@ int main()
 	lab3(Cvar, fBlocks, Hfree, Hp32, Hrep, Hkpm);
 	lab4(Cvar, fBlocks, Hfree, Hp32, Hrep, Hkpm);
 	lab5(Cvar, fBlocks, Hfree, Hp32, Hrep, Hkpm);
+	return 143;
 }
