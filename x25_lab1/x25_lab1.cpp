@@ -67,6 +67,7 @@ int P2(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, char
 		offset += 128;
 		inUse = inUse->next_block_add;
 	}
+	delete inUse;
 	return -1;
 }
 
@@ -81,7 +82,6 @@ void P4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, Сh
 	int VS = Cvar.Z1;
 	int VR = Cvar.Z2;
 	if (ilab3 == 0) {
-		//Hp32->First_fb->pr_block_add = 0;
 		Hp32->First_fb->frame_header = VR << 5;
 		Hp32->First_fb->frame_header += VS << 1;
 		Hp32->First_fb->frame_header &= 238;
@@ -90,7 +90,8 @@ void P4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, Сh
 			CRC ^= Hp32->First_fb->information_part[i];
 		}
 		Hp32->First_fb->CRC = CRC << 8;
-		Hp32->First_fb->CRC += (uint8_t)(Hp32->First_fb->frame_header ^ Cvar.m + 1);
+		Hp32->First_fb->CRC += (Hp32->First_fb->frame_header ^ Hp32->First_fb->information_part[0]);
+		int u = 0;
 	}
 	else if (ilab3 == 1) {
 		Free_block *fb = Hp32->First_fb;
@@ -108,13 +109,13 @@ void P4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, Сh
 			VS++;
 		}
 	}
-
 }
 
 //перенос информационного кадра, сформированного программой P4, в очередь повтора Оповт и в регистр на передачу в канал.
 Free_block P5(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32, СharacteristicFB *Hrep, int MCICL = 1) {
 	transfer(Hp32, Hrep, MCICL);
-	Free_block *fb = Hp32->First_fb;
+	Free_block *fb = new Free_block;
+	memcpy(fb, Hrep->First_fb, sizeof(Free_block));
 	fb->pr_block_add = 0;
 	fb->next_block_add = 0;
 	return *fb;
@@ -191,6 +192,7 @@ Free_block P12(СharacteristicFB *Hfree, СharacteristicFB *Hrep, Free_block *fb
 	printing_FB(Hfree->Last_fb, 1, 0);
 	Free_block *_fb = Hrep->First_fb;
 	int i = 1;
+	Free_block *__fb = Hrep->First_fb;
 	while (_fb != NULL) {
 		std::cout << "\n\nКадр Оповт " << i << std::endl;
 		i++;
@@ -286,25 +288,23 @@ void printing_FB(Free_block *fb, int inform = 0, int form = 0) {
 //Программа формирования и передачи в канал связи одного информационного кадра
 void lab1(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32, СharacteristicFB *Hrep, СharacteristicFB *Hkpm, int &Regim){
 	Free_block *fBlocks_in_lab1 = new Free_block[Cvar.N1];
-	СharacteristicFB *Hfree_in_lab1 = new СharacteristicFB{ 0, 0, 0 };
-	СharacteristicFB *Hp32_in_lab1 = new СharacteristicFB{ 0, 0, 0 };
-	СharacteristicFB *Hrep_in_lab1 = new СharacteristicFB{ 0, 0, 0 };
-	fBlocks_in_lab1 = fBlocks;
-	Hfree_in_lab1 = Hfree;
-	Hp32_in_lab1 = Hp32;
-	Hrep_in_lab1 = Hrep;
+	//fBlocks_in_lab1 = fBlocks;
 	std::string temp = "Слава тебе, безысходная боль!\nУмер вчера сероглазый король.\n\nВечер осенний был душен и ал,\nМуж мой, вернувшись, спокойно сказал:\n\n«Знаешь, с охоты его принесли,\nТело у старого дуба нашли.\n\nЖаль королеву. Такой молодой!..\nЗа ночь одну она стала седой».\n\nТрубку свою на камине нашел\nИ на работу ночную ушел.\n\nДочку мою я сейчас разбужу,\nВ серые глазки ее погляжу.\n\nА за окном шелестят тополя:\n«Нет на земле твоего короля…»\n\n\nДвадцать первое. Ночь. Понедельник.\nОчертанья столицы во мгле.\nСочинил же какой - то бездельник,\nЧто бывает любовь на земле.\n\nИ от лености или со скуки\nВсе поверили, так и живут:\nЖдут свиданий, боятся разлуки\nИ любовные песни поют.\n\nНо иным открывается тайна,\nИ почиет на них тишина\nЯ на это наткнулась случайно\nИ с тех пор все как будто больна.";
 	char mas[1024];
 	strncpy_s(mas, temp.c_str(), sizeof(mas));
 	mas[sizeof(mas) - 1] = 0;
-	for (int i = 0; i < 1024; i++) {
-		mas[i] = Cvar.m + 1;
+	int m = Cvar.m + 1;
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 128; j++) {
+			mas[j + i*128] = m;
+		}
+		m++;
 	}
-	P1(Cvar, fBlocks_in_lab1, Hfree_in_lab1);
-	P2(Cvar, fBlocks_in_lab1, Hfree_in_lab1, mas, temp.length());
-	P3(Cvar, fBlocks_in_lab1, Hfree_in_lab1, Hp32_in_lab1);
-	P4(Cvar, fBlocks_in_lab1, Hfree_in_lab1, Hp32_in_lab1);
-	Free_block RGout = P5(Cvar, fBlocks_in_lab1, Hfree_in_lab1, Hp32_in_lab1, Hrep_in_lab1);
+	P1(Cvar, fBlocks, Hfree);
+	P2(Cvar, fBlocks, Hfree, mas, temp.length());
+	P3(Cvar, fBlocks, Hfree, Hp32);
+	P4(Cvar, fBlocks, Hfree, Hp32);
+	Free_block RGout = P5(Cvar, fBlocks, Hfree, Hp32, Hrep);
 	//print_this_shit(Cvar, fBlocks);
 	std::cout << "Результаты Лабораторной работы 1" << std::endl;
 	std::cout << "\nВыходной регистр" << std::endl;
@@ -314,59 +314,42 @@ void lab1(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, �
 
 //Программа приема c канала кадра “RR”
 void lab2(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32, СharacteristicFB *Hrep, СharacteristicFB *Hkpm, int &Regim) {
-	Free_block *fBlocks_in_lab2 = new Free_block[Cvar.N1];
-	СharacteristicFB *Hfree_in_lab2 = new СharacteristicFB{ 0, 0, 0 };
-	СharacteristicFB *Hp32_in_lab2 = new СharacteristicFB{ 0, 0, 0 };
-	СharacteristicFB *Hrep_in_lab2 = new СharacteristicFB{ 0, 0, 0 };
-	СharacteristicFB *Hkpm_in_lab2 = new СharacteristicFB{ 0,0,0 };
-	int REGIM = 0;
-	fBlocks_in_lab2 = fBlocks;
-	Hfree_in_lab2 = Hfree;
-	Hp32_in_lab2 = Hp32;
-	Hrep_in_lab2 = Hrep;
-	Hkpm_in_lab2 = Hkpm;
 	RRPacket RGin = P6();
-	P7(Cvar, fBlocks_in_lab2, Hfree_in_lab2, RGin);
-	P8(Hfree_in_lab2, Hkpm_in_lab2);
-	P9(Hrep_in_lab2, Hkpm_in_lab2);
-	P10(Hfree_in_lab2, Hkpm_in_lab2, Hrep_in_lab2);
+	P7(Cvar, fBlocks, Hfree, RGin);
+	P8(Hfree, Hkpm);
+	P9(Hrep, Hkpm);
+	P10(Hfree, Hkpm, Hrep);
 	Regim = P11();
 	std::cout << "\nРезультаты Лабораторной работы 2" << std::endl;
 	std::cout << "\nПакет I" << std::endl;
-	printing_FB(Hfree_in_lab2->Last_fb, 1);
+	printing_FB(Hfree->Last_fb, 1);
 	std::cout << "\n\nПакет RR" << std::endl;
-	printing_FB(Hfree_in_lab2->Last_fb->pr_block_add, 1);
+	printing_FB(Hfree->Last_fb->pr_block_add, 1);
 	return;
 }
 
 //Программа передачи в канал связи нескольких информационных кадров
 void lab3(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32, СharacteristicFB *Hrep, СharacteristicFB *Hkpm, int &Regim) {
-	Free_block *fBlocks_in_lab3 = new Free_block[Cvar.N1];
-	СharacteristicFB *Hfree_in_lab3 = new СharacteristicFB{ 0, 0, 0 };
-	СharacteristicFB *Hp32_in_lab3 = new СharacteristicFB{ 0, 0, 0 };
-	СharacteristicFB *Hrep_in_lab3 = new СharacteristicFB{ 0, 0, 0 };
-	СharacteristicFB *Hkpm_in_lab3 = new СharacteristicFB{ 0, 0, 0 };
-	fBlocks_in_lab3 = fBlocks;
-	Hfree_in_lab3 = Hfree;
-	Hp32_in_lab3 = Hp32;
-	Hrep_in_lab3 = Hrep;
-	Hkpm_in_lab3 = Hkpm;
 	char mas[1024];
 	mas[sizeof(mas) - 1] = 0;
-	for (int i = 0; i < 1024; i++) {
-		mas[i] = Cvar.m + 1;
+	int m = Cvar.m;
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 128; j++) {
+			mas[j + i * 128] = m;
+		}
+		m++;
 	}
-	P1(Cvar, fBlocks_in_lab3, Hfree_in_lab3);
-	P2(Cvar, fBlocks_in_lab3, Hfree_in_lab3, mas, 700);
-	P3(Cvar, fBlocks_in_lab3, Hfree_in_lab3, Hp32_in_lab3);
-	P4(Cvar, fBlocks_in_lab3, Hfree_in_lab3, Hp32_in_lab3, 1);
-	Free_block RGout = P5(Cvar, fBlocks_in_lab3, Hfree_in_lab3, Hp32_in_lab3, Hrep_in_lab3, Cvar.MCICL);
+	P1(Cvar, fBlocks, Hfree);
+	P2(Cvar, fBlocks, Hfree, mas, 700);
+	P3(Cvar, fBlocks, Hfree, Hp32);
+	P4(Cvar, fBlocks, Hfree, Hp32, 1);
+	Free_block RGout = P5(Cvar, fBlocks, Hfree, Hp32, Hrep, Cvar.MCICL);
 	std::cout << "\nРезультаты Лабораторной работы 3" << std::endl;
 	std::cout << "\nРегистр вывода 1";
 	printing_FB(&RGout, 1);
 	std::cout << "\n";
 	printing_FB(&RGout, 1, 1);
-	Free_block *fb = Hrep_in_lab3->First_fb;
+	Free_block *fb = Hrep->First_fb;
 	for (int i = 0; i < Cvar.MCICL; i++) {
 		std::cout << "\n\nОповт " << i + 1 << std::endl;
 		printing_FB(fb, 1);
@@ -379,12 +362,6 @@ void lab3(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, �
 
 //Программа приема c канала кадра “REJ”
 void lab4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32, СharacteristicFB *Hrep, СharacteristicFB *Hkpm, int &Regim) {
-	Free_block *fBlocks_in_lab4 = new Free_block[Cvar.N1];
-	СharacteristicFB *Hfree_in_lab4 = new СharacteristicFB{ 0, 0, 0 };
-	СharacteristicFB *Hkpm_in_lab4 = new СharacteristicFB{ 0,0,0 };
-	Hkpm_in_lab4 = Hkpm;
-	fBlocks_in_lab4 = fBlocks;
-	Hfree_in_lab4 = Hfree;
 	RRPacket RGin = P6(1);
 	std::cout << "\n\nРезультаты Лабораторной работы 4\n" << std::endl;
 	std::cout << "REJ до отправки в Освоб\nЗаголовк кадра\n";
@@ -398,24 +375,14 @@ void lab4(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, �
 		std::cout << (((1 << i) & (uint8_t)RGin.CRC) ? '1' : '0');
 		if (i % 8 == 0) std::cout << " ";
 	}
-	P7(Cvar, fBlocks_in_lab4, Hfree_in_lab4, RGin);
-	P8(Hfree_in_lab4, Hkpm_in_lab4);
+	P7(Cvar, fBlocks, Hfree, RGin);
+	P8(Hfree, Hkpm);
 	Regim = 2;
-	P9(Hfree_in_lab4, Hkpm_in_lab4);
+	P9(Hfree, Hkpm);
 }
 
 //Программа передачи в канал кадров “I” c очереди повтора Оповт или стирания кадров из этой очереди при приеме кадра REG
 void lab5(Const_variables Cvar, Free_block *fBlocks, СharacteristicFB *Hfree, СharacteristicFB *Hp32, СharacteristicFB *Hrep, СharacteristicFB *Hkpm, int &Regim) {
-	Free_block *fBlocks_in_lab5 = new Free_block[Cvar.N1];
-	СharacteristicFB *Hfree_in_lab5 = new СharacteristicFB{ 0, 0, 0 };
-	СharacteristicFB *Hp32_in_lab5 = new СharacteristicFB{ 0, 0, 0 };
-	СharacteristicFB *Hrep_in_lab5 = new СharacteristicFB{ 0, 0, 0 };
-	СharacteristicFB *Hkpm_in_lab5 = new СharacteristicFB{ 0,0,0 };
-	Hkpm_in_lab5 = Hkpm;
-	fBlocks_in_lab5 = fBlocks;
-	Hfree_in_lab5 = Hfree;
-	Hp32_in_lab5 = Hp32;
-	Hrep_in_lab5 = Hrep;
 	std::cout << "\n\nРезультаты Лабораторной работы 5";
 	P10(Hfree, Hkpm, Hrep, 1);
 }
@@ -435,5 +402,9 @@ int main()
 	lab3(Cvar, fBlocks, Hfree, Hp32, Hrep, Hkpm, Regim);
 	lab4(Cvar, fBlocks, Hfree, Hp32, Hrep, Hkpm, Regim);
 	lab5(Cvar, fBlocks, Hfree, Hp32, Hrep, Hkpm, Regim);
+	delete Hfree;
+	delete Hp32;
+	delete Hrep;
+	delete Hkpm;
 	return 143;
 }
